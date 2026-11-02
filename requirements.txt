@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+httpx
+psycopg[binary]
+pgvector
+pymongo
+cryptography
+python-dotenv
+apscheduler
+sentence-transformers
+
