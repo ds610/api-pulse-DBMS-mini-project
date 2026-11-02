@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Pulse | Multi-Provider Monitoring & Discovery</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              DEFAULT: '#0f172a',
+              card: '#1e293b',
+              border: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Inter Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="glass sticky top-0 z-50 px-6 py-4 border-b border-surface-border">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">API Pulse</h1>
+          <p class="text-xs text-slate-400">Polyglot API Gateway & Monitoring (PostgreSQL + MongoDB)</p>
+        </div>
+      </div>
+
+      <!-- Live Database Status Badges -->
+      <div class="flex items-center space-x-3 text-xs">
+        <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-medium">PostgreSQL 16 (pgvector)</span>
+        </div>
+        <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-medium">MongoDB 7 Logs</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <div class="bg-surface-card/40 border-b border-surface-border px-6">
+    <div class="max-w-7xl mx-auto flex space-x-8 text-sm font-medium">
+      <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="py-4 border-b-2 border-indigo-500 text-indigo-400 flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        <span>Analytics & Quotas</span>
+      </button>
+      <button onclick="switchTab('search')" id="tab-btn-search" class="py-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <span>Semantic Search (pgvector)</span>
+      </button>
+      <button onclick="switchTab('alerts')" id="tab-btn-alerts" class="py-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+        <span>Alert Engine</span>
+      </button>
+      <button onclick="switchTab('proxy')" id="tab-btn-proxy" class="py-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+        <span>Live Gateway Proxy</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full space-y-8">
+
+    <!-- KPI SUMMARY CARDS -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- Total Logs Card -->
+      <div class="glass rounded-2xl p-5 border border-surface-border relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Total Request Logs</p>
+          <div class="p-2 rounded-xl bg-indigo-500/10 text-indigo-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1.5 3 3.5 3h9c2 0 3.5-1 3.5-3V7c0-2-1.5-3-3.5-3h-9C5.5 4 4 5 4 7z" /></svg>
+          </div>
+        </div>
+        <p id="kpi-total-requests" class="text-3xl font-extrabold text-white mt-3">--</p>
+        <p class="text-xs text-slate-400 mt-1">Stored in MongoDB <span class="text-slate-300">api_logs</span></p>
+      </div>
+
+      <!-- Services Monitored -->
+      <div class="glass rounded-2xl p-5 border border-surface-border relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Registered APIs</p>
+          <div class="p-2 rounded-xl bg-violet-500/10 text-violet-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          </div>
+        </div>
+        <p id="kpi-total-services" class="text-3xl font-extrabold text-white mt-3">--</p>
+        <p class="text-xs text-slate-400 mt-1">Managed in PostgreSQL <span class="text-slate-300">api_services</span></p>
+      </div>
+
+      <!-- Global Error Rate -->
+      <div class="glass rounded-2xl p-5 border border-surface-border relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Avg Error Rate</p>
+          <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+        </div>
+        <p id="kpi-avg-error-rate" class="text-3xl font-extrabold text-white mt-3">--</p>
+        <p class="text-xs text-slate-400 mt-1">Computed from status &ge; 400</p>
+      </div>
+
+      <!-- Active Alerts -->
+      <div class="glass rounded-2xl p-5 border border-surface-border relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <p class="text-xs uppercase font-semibold text-slate-400 tracking-wider">Triggered Alerts</p>
+          <div class="p-2 rounded-xl bg-rose-500/10 text-rose-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+        </div>
+        <p id="kpi-triggered-events" class="text-3xl font-extrabold text-rose-400 mt-3">--</p>
+        <p class="text-xs text-slate-400 mt-1">Logged in <span class="text-slate-300">alert_events</span></p>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 1: ANALYTICS & QUOTAS ==================== -->
+    <div id="tab-analytics" class="space-y-8">
+      
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Latency Chart -->
+        <div class="glass rounded-2xl p-6 border border-surface-border">
+          <h2 class="text-base font-semibold text-white mb-1">Latency Comparison (Avg vs p95 ms)</h2>
+          <p class="text-xs text-slate-400 mb-4">Calculated using MongoDB 7 <code class="text-indigo-300">$percentile</code> approximation</p>
+          <div class="h-64">
+            <canvas id="latencyChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Request Distribution Chart -->
+        <div class="glass rounded-2xl p-6 border border-surface-border">
+          <h2 class="text-base font-semibold text-white mb-1">Request Volume by Service</h2>
+          <p class="text-xs text-slate-400 mb-4">Traffic share over the past 30 days</p>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="volumeChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Service Performance Table with Quota Consumption -->
+      <div class="glass rounded-2xl p-6 border border-surface-border">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-semibold text-white">Service Quotas & Performance Table</h2>
+            <p class="text-xs text-slate-400">Relational metadata from PostgreSQL joined with aggregated metrics from MongoDB</p>
+          </div>
+          <button onclick="loadAllData()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600/50 transition">
+            ↻ Refresh
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="text-xs uppercase bg-slate-800/60 text-slate-400 border-b border-surface-border">
+              <tr>
+                <th class="py-3 px-4">Service</th>
+                <th class="py-3 px-4">Provider</th>
+                <th class="py-3 px-4">Owner (Plan)</th>
+                <th class="py-3 px-4 text-right">Total Requests</th>
+                <th class="py-3 px-4 text-right">Error Rate</th>
+                <th class="py-3 px-4 text-right">Avg Latency</th>
+                <th class="py-3 px-4 text-right">p95 Latency</th>
+                <th class="py-3 px-4">Quota Consumption</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-table-body" class="divide-y divide-surface-border">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: SEMANTIC SEARCH ==================== -->
+    <div id="tab-search" class="space-y-6 hidden">
+      <div class="glass rounded-2xl p-6 border border-surface-border">
+        <div class="max-w-3xl">
+          <h2 class="text-xl font-bold text-white mb-2">Semantic API Discovery</h2>
+          <p class="text-sm text-slate-400 mb-6">
+            Search for registered APIs in natural language. Powered by <span class="text-indigo-400 font-medium">all-MiniLM-L6-v2</span> dense vectors (384 dimensions) and PostgreSQL's <span class="text-indigo-400 font-medium">HNSW index</span> with cosine distance (<code class="text-indigo-300">&lt;=&gt;</code>).
+          </p>
+
+          <!-- Search Input -->
+          <form onsubmit="handleSearch(event)" class="flex gap-3">
+            <div class="relative flex-1">
+              <input type="text" id="semantic-search-input" placeholder="e.g. 'send text messages', 'accept payments online', 'chatbot that writes answers'..."
+                class="w-full px-4 py-3 pl-11 rounded-xl bg-slate-900/80 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm">
+              <svg class="w-5 h-5 text-slate-500 absolute left-3.5 top-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <button type="submit" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/30 transition">
+              Search
+            </button>
+          </form>
+
+          <!-- Prompt chips -->
+          <div class="flex items-center gap-2 mt-4 text-xs text-slate-400 flex-wrap">
+            <span>Try asking:</span>
+            <button onclick="setQuery('send text messages')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700">"send text messages"</button>
+            <button onclick="setQuery('accept payments online')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700">"accept payments online"</button>
+            <button onclick="setQuery('chatbot that writes answers')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700">"chatbot that writes answers"</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Results Area -->
+      <div id="search-results-container" class="space-y-4">
+        <!-- Rendered results -->
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: ALERT ENGINE ==================== -->
+    <div id="tab-alerts" class="space-y-6 hidden">
+      <div class="glass rounded-2xl p-6 border border-surface-border">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-white mb-1">Cross-Database Alert Rules & Events</h2>
+            <p class="text-sm text-slate-400">
+              Evaluates thresholds defined in <span class="text-indigo-400">PostgreSQL</span> against runtime log aggregates in <span class="text-indigo-400">MongoDB</span>.
+            </p>
+          </div>
+          <button onclick="triggerAlertEvaluation()" id="btn-run-alerts" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-medium text-sm shadow-lg shadow-rose-600/20 transition flex items-center space-x-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Run Alert Check Now</span>
+          </button>
+        </div>
+
+        <!-- Alert Rules List -->
+        <div class="mt-6">
+          <h3 class="text-sm font-semibold uppercase text-slate-400 mb-3 tracking-wider">Configured Alert Rules (PostgreSQL)</h3>
+          <div id="alert-rules-list" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Rules dynamically rendered -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Triggered Events Timeline -->
+      <div class="glass rounded-2xl p-6 border border-surface-border">
+        <h3 class="text-base font-semibold text-white mb-4">Logged Alert Events (<code class="text-indigo-300">alert_events</code> table)</h3>
+        <div id="alert-events-list" class="space-y-3">
+          <!-- Events dynamically rendered -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: LIVE GATEWAY PROXY ==================== -->
+    <div id="tab-proxy" class="space-y-6 hidden">
+      <div class="glass rounded-2xl p-6 border border-surface-border">
+        <h2 class="text-xl font-bold text-white mb-1">API Pulse Gateway Playground</h2>
+        <p class="text-sm text-slate-400 mb-6">
+          Dispatch requests through the API Pulse reverse proxy. The proxy validates the route, measures end-to-end latency, streams the upstream response, and appends a structured log into MongoDB in real time.
+        </p>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Request Form -->
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Target Service</label>
+              <select id="proxy-service-select" onchange="updateProxyEndpoints()" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-indigo-500">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Method</label>
+                <select id="proxy-method-select" class="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-indigo-500">
+                  <option value="GET">GET</option>
+                  <option value="POST">POST</option>
+                </select>
+              </div>
+              <div class="col-span-2">
+                <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Path</label>
+                <input type="text" id="proxy-path-input" value="/v1/customers" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-indigo-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs uppercase font-semibold text-slate-400 mb-1">Gateway URL</label>
+              <div class="px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-indigo-400 font-mono text-xs break-all" id="proxy-url-preview">
+                /proxy/1/v1/customers
+              </div>
+            </div>
+
+            <button onclick="sendProxyRequest()" id="btn-send-proxy" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/30 transition flex items-center justify-center space-x-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <span>Dispatch via API Pulse Gateway</span>
+            </button>
+          </div>
+
+          <!-- Response Inspector -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase font-semibold text-slate-400">Gateway Response & Logging</span>
+              <span id="proxy-status-badge" class="hidden text-xs px-2.5 py-1 rounded-full font-mono font-semibold"></span>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 min-h-[220px] max-h-[300px] overflow-y-auto whitespace-pre-wrap" id="proxy-response-output">Ready to proxy requests. Select a service and click Dispatch.</div>
+
+            <div id="proxy-mongo-log-card" class="hidden p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-xs text-emerald-300">
+              <p class="font-semibold flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+                Appended to MongoDB collection <code>api_logs</code>
+              </p>
+              <div id="proxy-mongo-log-details" class="mt-1 text-slate-400 font-mono text-[11px]"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    let latencyChartInstance = null;
+    let volumeChartInstance = null;
+    let servicesCache = [];
+
+    // Switch Tabs
+    function switchTab(tab) {
+      ['analytics', 'search', 'alerts', 'proxy'].forEach(t => {
+        document.getElementById(`tab-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-btn-${t}`);
+        btn.classList.remove('border-indigo-500', 'text-indigo-400');
+        btn.classList.add('border-transparent', 'text-slate-400');
+      });
+      document.getElementById(`tab-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tab}`);
+      activeBtn.classList.remove('border-transparent', 'text-slate-400');
+      activeBtn.classList.add('border-indigo-500', 'text-indigo-400');
+
+      if (tab === 'analytics') {
+        renderCharts();
+      }
+    }
+
+    // Load initial data
+    async function loadAllData() {
+      try {
+        const [overviewRes, analyticsRes, alertsRes] = await Promise.all([
+          fetch('/api/overview'),
+          fetch('/api/analytics'),
+          fetch('/api/alerts')
+        ]);
+
+        const overview = await overviewRes.json();
+        const analytics = await analyticsRes.json();
+        const alerts = await alertsRes.json();
+
+        servicesCache = overview.services || [];
+
+        // Update KPIs
+        document.getElementById('kpi-total-requests').innerText = overview.total_requests.toLocaleString();
+        document.getElementById('kpi-total-services').innerText = overview.services.length;
+        document.getElementById('kpi-avg-error-rate').innerText = `${overview.avg_error_rate.toFixed(2)}%`;
+        document.getElementById('kpi-triggered-events').innerText = alerts.events.length;
+
+        // Render Table & Charts
+        renderAnalyticsTable(analytics, overview.services);
+        renderCharts(analytics);
+
+        // Render Alerts Tab
+        renderAlerts(alerts);
+
+        // Setup Proxy Tab Dropdown
+        setupProxyForm(overview.services);
+
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
+      }
+    }
+
+    // Render Analytics Table
+    function renderAnalyticsTable(analytics, services) {
+      const tbody = document.getElementById('analytics-table-body');
+      tbody.innerHTML = '';
+
+      analytics.forEach(item => {
+        const srv = services.find(s => s.service_id === item.service_id) || {};
+        const maxReq = srv.max_requests || 1000;
+        const usagePct = (item.total / maxReq) * 100;
+        const isQuotaExceeded = usagePct >= 100;
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-slate-800/30 transition";
+        row.innerHTML = `
+          <td class="py-3 px-4 font-medium text-white flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full ${isQuotaExceeded ? 'bg-rose-500' : 'bg-emerald-400'}"></span>
+            <span>${item.service_name}</span>
+          </td>
+          <td class="py-3 px-4 text-slate-300 font-mono text-xs">${srv.provider || '--'}</td>
+          <td class="py-3 px-4 text-slate-300 text-xs">${srv.owner || '--'} <span class="text-indigo-400">(${srv.plan_name || 'Free'})</span></td>
+          <td class="py-3 px-4 text-right font-mono font-medium text-white">${item.total.toLocaleString()}</td>
+          <td class="py-3 px-4 text-right font-mono ${item.error_rate > 5 ? 'text-rose-400' : 'text-emerald-400'}">${item.error_rate.toFixed(2)}%</td>
+          <td class="py-3 px-4 text-right font-mono text-slate-200">${Math.round(item.avg_ms)} ms</td>
+          <td class="py-3 px-4 text-right font-mono text-amber-300">${Math.round(item.p95_ms)} ms</td>
+          <td class="py-3 px-4">
+            <div class="flex items-center space-x-2">
+              <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                <div class="${isQuotaExceeded ? 'bg-rose-500' : 'bg-indigo-500'} h-full rounded-full" style="width: ${Math.min(usagePct, 100)}%"></div>
+              </div>
+              <span class="text-xs font-mono ${isQuotaExceeded ? 'text-rose-400 font-semibold' : 'text-slate-400'}">${usagePct.toFixed(0)}%</span>
+            </div>
+            <span class="text-[10px] text-slate-500">${item.total.toLocaleString()} / ${maxReq.toLocaleString()} (${srv.limit_type || 'monthly'})</span>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // Render Charts
+    function renderCharts(analyticsData) {
+      if (!analyticsData || !analyticsData.length) return;
+
+      const labels = analyticsData.map(a => a.service_name);
+      const avgLatencies = analyticsData.map(a => Math.round(a.avg_ms));
+      const p95Latencies = analyticsData.map(a => Math.round(a.p95_ms));
+      const volumes = analyticsData.map(a => a.total);
+
+      // Latency Bar Chart
+      const latencyCtx = document.getElementById('latencyChart').getContext('2d');
+      if (latencyChartInstance) latencyChartInstance.destroy();
+      latencyChartInstance = new Chart(latencyCtx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Avg Latency (ms)', data: avgLatencies, backgroundColor: 'rgba(99, 102, 241, 0.7)', borderRadius: 6 },
+            { label: 'p95 Latency (ms)', data: p95Latencies, backgroundColor: 'rgba(245, 158, 11, 0.7)', borderRadius: 6 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#94a3b8' } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51, 65, 85, 0.4)' } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(51, 65, 85, 0.4)' } }
+          }
+        }
+      });
+
+      // Volume Doughnut Chart
+      const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+      if (volumeChartInstance) volumeChartInstance.destroy();
+      volumeChartInstance = new Chart(volumeCtx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: volumes,
+            backgroundColor: [
+              'rgba(99, 102, 241, 0.8)',
+              'rgba(168, 85, 247, 0.8)',
+              'rgba(236, 72, 153, 0.8)'
+            ],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } }
+        }
+      });
+    }
+
+    // Render Alerts
+    function renderAlerts(alerts) {
+      const rulesList = document.getElementById('alert-rules-list');
+      rulesList.innerHTML = '';
+      alerts.rules.forEach(r => {
+        const card = document.createElement('div');
+        card.className = "p-4 rounded-xl bg-slate-900/60 border border-slate-800";
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-white">${r.service_name}</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono ${r.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-800 text-slate-500'}">
+              ${r.is_active ? 'ACTIVE' : 'INACTIVE'}
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Metric: <span class="text-indigo-300 font-mono">${r.metric}</span></p>
+          <p class="text-xs text-slate-400">Threshold: <span class="text-rose-400 font-mono">${r.threshold}${r.metric === 'latency' ? ' ms' : '%'}</span></p>
+        `;
+        rulesList.appendChild(card);
+      });
+
+      const eventsList = document.getElementById('alert-events-list');
+      eventsList.innerHTML = '';
+      if (!alerts.events.length) {
+        eventsList.innerHTML = '<p class="text-xs text-slate-500">No alert events triggered yet.</p>';
+        return;
+      }
+
+      alerts.events.forEach(e => {
+        const item = document.createElement('div');
+        item.className = "p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-start space-x-3";
+        item.innerHTML = `
+          <div class="p-1.5 rounded-lg bg-rose-500/20 text-rose-400 mt-0.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          </div>
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-300">${e.service_name}</span>
+              <span class="text-[11px] text-slate-500 font-mono">${new Date(e.triggered_at).toLocaleString()}</span>
+            </div>
+            <p class="text-xs text-slate-300 mt-1">${e.message}</p>
+          </div>
+        `;
+        eventsList.appendChild(item);
+      });
+    }
+
+    // Trigger Alert Evaluation from UI
+    async function triggerAlertEvaluation() {
+      const btn = document.getElementById('btn-run-alerts');
+      btn.disabled = true;
+      btn.innerText = "Evaluating...";
+      try {
+        const res = await fetch('/api/alerts/run', { method: 'POST' });
+        const data = await res.json();
+        alert(`Alert Check Completed!\n${data.triggered_count} events triggered.`);
+        loadAllData();
+      } catch (err) {
+        alert("Failed to run alert check: " + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Run Alert Check Now";
+      }
+    }
+
+    // Semantic Search Handler
+    function setQuery(text) {
+      document.getElementById('semantic-search-input').value = text;
+      handleSearch(new Event('submit'));
+    }
+
+    async function handleSearch(e) {
+      if (e) e.preventDefault();
+      const q = document.getElementById('semantic-search-input').value.trim();
+      if (!q) return;
+
+      const container = document.getElementById('search-results-container');
+      container.innerHTML = '<div class="glass p-6 rounded-2xl text-center text-sm text-slate-400">Computing vector similarity via pgvector...</div>';
+
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        container.innerHTML = '';
+
+        if (!data.results || !data.results.length) {
+          container.innerHTML = '<div class="glass p-6 rounded-2xl text-center text-sm text-slate-400">No matching services found.</div>';
+          return;
+        }
+
+        data.results.forEach((item, idx) => {
+          const pct = (item.similarity * 100).toFixed(1);
+          const isTop = idx === 0;
+          const card = document.createElement('div');
+          card.className = `glass rounded-2xl p-5 border ${isTop ? 'border-indigo-500/50 bg-indigo-950/20' : 'border-surface-border'} transition`;
+          card.innerHTML = `
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-base font-bold text-white">${item.service_name}</h3>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-indigo-300 border border-slate-700">${item.provider}</span>
+                  ${isTop ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500 text-white">TOP MATCH</span>' : ''}
+                </div>
+                <p class="text-xs text-slate-300 mt-1">${item.description}</p>
+                <p class="text-xs text-slate-500 font-mono mt-2">${item.base_url}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-lg font-extrabold ${isTop ? 'text-indigo-400' : 'text-slate-300'} font-mono">${pct}%</span>
+                <p class="text-[10px] text-slate-500 uppercase tracking-wider">Similarity</p>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        container.innerHTML = `<div class="glass p-6 rounded-2xl text-center text-sm text-rose-400">Error: ${err}</div>`;
+      }
+    }
+
+    // Setup Proxy Form
+    function setupProxyForm(services) {
+      const select = document.getElementById('proxy-service-select');
+      select.innerHTML = '';
+      services.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.service_id;
+        opt.innerText = `${s.service_name} (${s.provider})`;
+        select.appendChild(opt);
+      });
+      updateProxyEndpoints();
+    }
+
+    function updateProxyEndpoints() {
+      const sid = document.getElementById('proxy-service-select').value;
+      const pathInput = document.getElementById('proxy-path-input');
+      const methodSelect = document.getElementById('proxy-method-select');
+
+      if (sid == 1) { // Stripe
+        pathInput.value = '/v1/customers';
+        methodSelect.value = 'GET';
+      } else if (sid == 2) { // Twilio
+        pathInput.value = '/Messages';
+        methodSelect.value = 'POST';
+      } else if (sid == 3) { // OpenAI
+        pathInput.value = '/v1/chat/completions';
+        methodSelect.value = 'POST';
+      }
+      updatePreview();
+    }
+
+    function updatePreview() {
+      const sid = document.getElementById('proxy-service-select').value;
+      const path = document.getElementById('proxy-path-input').value;
+      document.getElementById('proxy-url-preview').innerText = `/proxy/${sid}${path.startsWith('/') ? path : '/' + path}`;
+    }
+
+    document.getElementById('proxy-path-input').addEventListener('input', updatePreview);
+
+    // Send Request via Proxy
+    async function sendProxyRequest() {
+      const sid = document.getElementById('proxy-service-select').value;
+      let path = document.getElementById('proxy-path-input').value.trim();
+      if (path.startsWith('/')) path = path.substring(1);
+      const method = document.getElementById('proxy-method-select').value;
+
+      const btn = document.getElementById('btn-send-proxy');
+      const output = document.getElementById('proxy-response-output');
+      const badge = document.getElementById('proxy-status-badge');
+      const mongoLogCard = document.getElementById('proxy-mongo-log-card');
+      const mongoLogDetails = document.getElementById('proxy-mongo-log-details');
+
+      btn.disabled = true;
+      btn.innerText = "Dispatching...";
+      output.innerText = "Sending through API Pulse Gateway...";
+      badge.classList.add('hidden');
+      mongoLogCard.classList.add('hidden');
+
+      const proxyUrl = `/proxy/${sid}/${path}`;
+
+      try {
+        const t0 = performance.now();
+        const res = await fetch(proxyUrl, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: method === 'POST' ? JSON.stringify({ message: "test ping from dashboard" }) : null
+        });
+        const duration = Math.round(performance.now() - t0);
+        const data = await res.json();
+
+        // Update badge
+        badge.classList.remove('hidden');
+        badge.innerText = `${res.status} ${res.statusText} (${duration}ms)`;
+        if (res.status >= 200 && res.status < 300) {
+          badge.className = "text-xs px-2.5 py-1 rounded-full font-mono font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+        } else {
+          badge.className = "text-xs px-2.5 py-1 rounded-full font-mono font-semibold bg-amber-500/20 text-amber-400 border border-amber-500/30";
+        }
+
+        output.innerText = JSON.stringify(data, null, 2);
+
+        // Show Mongo log card
+        mongoLogCard.classList.remove('hidden');
+        mongoLogDetails.innerText = `service_id: ${sid} | endpoint: /${path} | status: ${res.status} | latency: ${duration}ms`;
+
+        // Reload data to reflect new log count
+        setTimeout(loadAllData, 500);
+
+      } catch (err) {
+        output.innerText = `Proxy Error: ${err}`;
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Dispatch via API Pulse Gateway";
+      }
+    }
+
+    // Init on page load
+    window.addEventListener('DOMContentLoaded', loadAllData);
+  </script>
+</body>
+</html>
