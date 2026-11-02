@@ -240,6 +240,9 @@
             <p class="text-xs text-slate-400">PostgreSQL metadata & tier limits combined with runtime log aggregates from MongoDB</p>
           </div>
           <div class="flex items-center space-x-3">
+            <button id="btn-table-breach-indicator" onclick="showBreachModal()" class="hidden px-3 py-2 text-xs font-semibold rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 transition flex items-center space-x-1.5 animate-pulse cursor-pointer">
+              <span>⚠️ Quota Limit Breached (Click to View)</span>
+            </button>
             <button onclick="triggerRegisterFlow()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
               <span>+ Register New API & Key</span>
@@ -755,7 +758,22 @@
       max_services: 10,
       max_requests: 100000
     };
-    let hasShownBreachWarning = false;
+    let breachedCache = [];
+
+    function showBreachModal(serviceName, usage, limit, rate) {
+      if (!serviceName && breachedCache.length > 0) {
+        const b = breachedCache[0];
+        serviceName = b.service_name;
+        usage = `${b.total_requests.toLocaleString()} requests`;
+        limit = `${b.limit.toLocaleString()} requests`;
+        rate = `${b.percentage}% of Limit`;
+      }
+      document.getElementById('limit-popup-service').innerText = serviceName || 'Stripe Payments';
+      document.getElementById('limit-popup-usage').innerText = usage || '6,085 requests';
+      document.getElementById('limit-popup-limit').innerText = limit || '1,000 requests';
+      document.getElementById('limit-popup-rate').innerText = rate || '608.5% of Limit';
+      document.getElementById('modal-limit-warning').classList.remove('hidden');
+    }
 
     // Switch Tabs
     function switchTab(tab) {
@@ -891,15 +909,14 @@
         // Setup Proxy Tab Dropdown
         setupProxyForm(overview.services);
 
-        // Auto Pop-up check for Quota Breach (Req 4)
-        if (!hasShownBreachWarning && overview.breached_services && overview.breached_services.length > 0) {
-          const firstBreach = overview.breached_services[0];
-          document.getElementById('limit-popup-service').innerText = firstBreach.service_name;
-          document.getElementById('limit-popup-usage').innerText = `${firstBreach.total_requests.toLocaleString()} requests`;
-          document.getElementById('limit-popup-limit').innerText = `${firstBreach.limit.toLocaleString()} requests`;
-          document.getElementById('limit-popup-rate').innerText = `${firstBreach.percentage}% of Limit`;
-          document.getElementById('modal-limit-warning').classList.remove('hidden');
-          hasShownBreachWarning = true;
+        // Store breached services for on-demand inspection
+        breachedCache = overview.breached_services || [];
+        const breachBadgeBtn = document.getElementById('btn-table-breach-indicator');
+        if (breachedCache.length > 0) {
+          breachBadgeBtn.classList.remove('hidden');
+          breachBadgeBtn.innerText = `⚠️ ${breachedCache[0].service_name} Limit Breached (${breachedCache[0].percentage}%)`;
+        } else {
+          breachBadgeBtn.classList.add('hidden');
         }
 
       } catch (err) {
@@ -937,13 +954,25 @@
           <td class="py-3 px-4 text-right font-mono text-slate-200">${Math.round(stats.avg_ms)} ms</td>
           <td class="py-3 px-4 text-right font-mono text-amber-300">${Math.round(stats.p95_ms)} ms</td>
           <td class="py-3 px-4">
-            <div class="flex items-center space-x-2">
-              <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
-                <div class="${isQuotaExceeded ? 'bg-rose-500' : 'bg-indigo-500'} h-full rounded-full" style="width: ${Math.min(usagePct, 100)}%"></div>
+            ${isQuotaExceeded ? `
+              <button onclick="showBreachModal('${srv.service_name}', '${stats.total.toLocaleString()} requests', '${maxReq.toLocaleString()} requests', '${usagePct.toFixed(1)}% of Limit')" class="w-full text-left group cursor-pointer" title="Click to view Quota Limit Alert">
+                <div class="flex items-center space-x-2">
+                  <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                    <div class="bg-rose-500 h-full rounded-full" style="width: 100%"></div>
+                  </div>
+                  <span class="text-xs font-mono text-rose-400 font-bold group-hover:underline">${usagePct.toFixed(0)}% ⚠️</span>
+                </div>
+                <span class="text-[10px] text-rose-400/90 font-mono">${stats.total.toLocaleString()} / ${maxReq.toLocaleString()} (Click to inspect)</span>
+              </button>
+            ` : `
+              <div class="flex items-center space-x-2">
+                <div class="flex-1 bg-slate-800 rounded-full h-2 overflow-hidden">
+                  <div class="bg-indigo-500 h-full rounded-full" style="width: ${Math.min(usagePct, 100)}%"></div>
+                </div>
+                <span class="text-xs font-mono text-slate-400">${usagePct.toFixed(0)}%</span>
               </div>
-              <span class="text-xs font-mono ${isQuotaExceeded ? 'text-rose-400 font-semibold' : 'text-slate-400'}">${usagePct.toFixed(0)}%</span>
-            </div>
-            <span class="text-[10px] text-slate-500">${stats.total.toLocaleString()} / ${maxReq.toLocaleString()} (${srv.limit_type || 'monthly'})</span>
+              <span class="text-[10px] text-slate-500">${stats.total.toLocaleString()} / ${maxReq.toLocaleString()} (${srv.limit_type || 'monthly'})</span>
+            `}
           </td>
         `;
         tbody.appendChild(row);
