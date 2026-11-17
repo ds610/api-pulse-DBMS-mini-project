@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from password_utils import hash_password, verify_password
 
 import httpx
 import psycopg
