@@ -6,7 +6,8 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
-from password_utils import hash_password, verify_password
+from password_utils import hash_password, verify_password, password_hasher
+from auth_schemas import LoginPayload
 
 import httpx
 import psycopg
@@ -16,7 +17,7 @@ from argon2.exceptions import VerificationError, VerifyMismatchError
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pgvector.psycopg import register_vector
 from pymongo import MongoClient
 from sentence_transformers import SentenceTransformer
@@ -114,11 +115,21 @@ async def serve_dashboard():
 # Authentication & User Endpoints
 # ---------------------------------------------------------
 class LoginPayload(BaseModel):
-    email: str
-    password: Optional[str] = None
+    email: str = Field(..., min_length=3, max_length=254)
+    password: str = Field(..., min_length=1, max_length=256)
+
 
 @app.post("/api/auth/login")
 async def login(payload: LoginPayload):
+    email = payload.email.strip().lower()
+    supplied_password = payload.password.strip()
+
+    if not email or not supplied_password:
+        raise HTTPException(
+            status_code=422,
+            detail="Email and password cannot be empty."
+        )
+
     with get_pg_conn() as conn:
         user = conn.execute("""
             SELECT u.user_id, u.name, u.email, u.password_hash, r.role_name,
@@ -128,45 +139,54 @@ async def login(payload: LoginPayload):
             LEFT JOIN user_subscriptions us ON us.user_id = u.user_id AND us.status = 'active'
             LEFT JOIN plans p ON p.plan_id = us.plan_id
             WHERE u.email = %s;
-        """, (payload.email.strip().lower(),)).fetchone()
+        """, (email,)).fetchone()
 
         if not user:
-            raise HTTPException(status_code=401, detail="User account not found with this email.")
+            raise HTTPException(
+                status_code=401,
+                detail="User account not found with this email."
+            )
 
-        # Password check. New hashes use Argon2id; existing SHA-256 and
-        # plaintext demo passwords are upgraded after a successful login.
-        # Placeholder demo accounts retain their original compatibility behavior.
-        if payload.password and payload.password.strip():
-            supplied_password = payload.password.strip()
-            stored_hash = user[3] or ""
-            placeholder_hash = f"placeholder_hash_{user[0]}"
+        stored_hash = user[3] or ""
+        placeholder_hash = f"placeholder_hash_{user[0]}"
 
-            if stored_hash == placeholder_hash:
-                # Preserve the project's existing placeholder-demo login behavior.
-                pass
-            elif stored_hash.startswith("$argon2"):
-                if not verify_password(supplied_password, stored_hash):
-                    raise HTTPException(status_code=401, detail="Invalid password.")
+        if stored_hash == placeholder_hash:
+            # Preserve existing placeholder-demo login behavior.
+            pass
 
-                if password_hasher.check_needs_rehash(stored_hash):
-                    conn.execute(
-                        "UPDATE users SET password_hash = %s WHERE user_id = %s",
-                        (hash_password(supplied_password), user[0])
-                    )
-            elif hmac.compare_digest(stored_hash, _legacy_sha256_hash(supplied_password)):
-                # Upgrade a valid legacy SHA-256 hash to Argon2id.
+        elif stored_hash.startswith("$argon2"):
+            if not verify_password(supplied_password, stored_hash):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid password."
+                )
+
+            if password_hasher.check_needs_rehash(stored_hash):
                 conn.execute(
                     "UPDATE users SET password_hash = %s WHERE user_id = %s",
                     (hash_password(supplied_password), user[0])
                 )
-            elif hmac.compare_digest(stored_hash, supplied_password):
-                # Upgrade a legacy plaintext demo password after successful login.
-                conn.execute(
-                    "UPDATE users SET password_hash = %s WHERE user_id = %s",
-                    (hash_password(supplied_password), user[0])
-                )
-            else:
-                raise HTTPException(status_code=401, detail="Invalid password.")
+
+        elif hmac.compare_digest(
+            stored_hash,
+            _legacy_sha256_hash(supplied_password)
+        ):
+            conn.execute(
+                "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                (hash_password(supplied_password), user[0])
+            )
+
+        elif hmac.compare_digest(stored_hash, supplied_password):
+            conn.execute(
+                "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                (hash_password(supplied_password), user[0])
+            )
+
+        else:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid password."
+            )
 
         return {
             "user_id": user[0],
