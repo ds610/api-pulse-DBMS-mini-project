@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import hmac
 import time
 import uuid
 from datetime import datetime, timezone
@@ -9,7 +10,9 @@ from typing import Optional
 import httpx
 import psycopg
 from cryptography.fernet import Fernet
-from fastapi import FastAPI, HTTPException, Request, Response
+from argon2 import PasswordHasher
+from argon2.exceptions import VerificationError, VerifyMismatchError
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
@@ -63,7 +66,23 @@ def mask_key(plain_key: str) -> str:
         return "••••••••"
     return f"{plain_key[:4]}••••••••{plain_key[-4:]}"
 
+# Argon2id is used for new password hashes. The legacy SHA-256 helper is
+# retained only to verify existing demo accounts during migration.
+password_hasher = PasswordHasher()
+
 def hash_password(password: str) -> str:
+    """Create a secure Argon2id password hash."""
+    return password_hasher.hash(password)
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verify a password against an Argon2id hash."""
+    try:
+        return password_hasher.verify(stored_hash, password)
+    except (VerifyMismatchError, VerificationError):
+        return False
+
+def _legacy_sha256_hash(password: str) -> str:
+    """Return the old SHA-256 format for migration-only verification."""
     return hashlib.sha256(password.encode()).hexdigest()
 
 # Lazy-loaded SentenceTransformer model
@@ -113,10 +132,39 @@ async def login(payload: LoginPayload):
         if not user:
             raise HTTPException(status_code=401, detail="User account not found with this email.")
 
-        # Password check (supports direct demo login or hash verification)
+        # Password check. New hashes use Argon2id; existing SHA-256 and
+        # plaintext demo passwords are upgraded after a successful login.
+        # Placeholder demo accounts retain their original compatibility behavior.
         if payload.password and payload.password.strip():
-            hashed_input = hash_password(payload.password.strip())
-            if user[3] not in [hashed_input, f"placeholder_hash_{user[0]}", payload.password.strip()]:
+            supplied_password = payload.password.strip()
+            stored_hash = user[3] or ""
+            placeholder_hash = f"placeholder_hash_{user[0]}"
+
+            if stored_hash == placeholder_hash:
+                # Preserve the project's existing placeholder-demo login behavior.
+                pass
+            elif stored_hash.startswith("$argon2"):
+                if not verify_password(supplied_password, stored_hash):
+                    raise HTTPException(status_code=401, detail="Invalid password.")
+
+                if password_hasher.check_needs_rehash(stored_hash):
+                    conn.execute(
+                        "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                        (hash_password(supplied_password), user[0])
+                    )
+            elif hmac.compare_digest(stored_hash, _legacy_sha256_hash(supplied_password)):
+                # Upgrade a valid legacy SHA-256 hash to Argon2id.
+                conn.execute(
+                    "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                    (hash_password(supplied_password), user[0])
+                )
+            elif hmac.compare_digest(stored_hash, supplied_password):
+                # Upgrade a legacy plaintext demo password after successful login.
+                conn.execute(
+                    "UPDATE users SET password_hash = %s WHERE user_id = %s",
+                    (hash_password(supplied_password), user[0])
+                )
+            else:
                 raise HTTPException(status_code=401, detail="Invalid password.")
 
         return {
@@ -588,12 +636,17 @@ async def delete_credential(credential_id: int):
 # Semantic Search (pgvector)
 # ---------------------------------------------------------
 @app.get("/api/search")
-async def semantic_search(q: str):
-    if not q or not q.strip():
+async def semantic_search(
+    q: str = Query(..., min_length=1, max_length=200),
+    top_k: int = Query(5, ge=1, le=20)
+):
+    """Find services by semantic similarity, returning up to top_k matches."""
+    cleaned_query = q.strip()
+    if not cleaned_query:
         return {"query": q, "results": []}
 
     model = get_model()
-    query_vector = model.encode(q.strip()).tolist()
+    query_vector = model.encode(cleaned_query).tolist()
 
     with get_pg_conn() as conn:
         rows = conn.execute("""
@@ -601,9 +654,9 @@ async def semantic_search(q: str):
                    (1 - (embedding <=> %s::vector)) AS similarity
             FROM api_services
             WHERE embedding IS NOT NULL
-            ORDER BY embedding <=> %s::vector
-            LIMIT 5;
-        """, (query_vector, query_vector)).fetchall()
+            ORDER BY embedding <=> %s::vector, service_id
+            LIMIT %s;
+        """, (query_vector, query_vector, top_k)).fetchall()
 
     results = [
         {
@@ -617,7 +670,7 @@ async def semantic_search(q: str):
         for r in rows
     ]
 
-    return {"query": q, "results": results}
+    return {"query": cleaned_query, "results": results}
 
 # ---------------------------------------------------------
 # Alerts
