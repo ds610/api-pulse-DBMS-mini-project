@@ -141,8 +141,8 @@ format_table(
     [3.25, 3.75],
     ["SRN", "Name"],
     [
-        ["PES1UG24CS... (Replace with SRN 1)", "Dheepak Seetharam"],
-        ["PES1UG24CS... (Replace with SRN 2)", "Team Partner"]
+        ["PES1UG24CS152", "Dheepak Seetharam"],
+        ["PES1UG24CS154", "Dhruv"]
     ],
     header_bg="334155"
 )
@@ -177,8 +177,8 @@ format_table(
     [1.5, 1.4, 1.3, 2.8],
     ["SRN", "Name", "Work package", "Responsibilities (database and application)"],
     [
-        ["PES1UG24CS... (SRN 1)", "Dheepak Seetharam", "A — Relational Schema & Security Core", "PostgreSQL DDL schema (10 tables); trigger trg_new_user_subscription; stored procedure sp_upgrade_user_subscription; view service_overview; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend main.py; advanced SQL suite (correlated, nested, recursive queries)."],
-        ["PES1UG24CS... (SRN 2)", "Team Partner", "B — Telemetry, NoSQL & Vector Layer", "MongoDB 7 setup; 12,000 synthetic log generator (generate_logs.py); compound indexing; $percentile p95 aggregation pipeline (analytics.py); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (semantic_search.py); cross-database alert engine (alerts.py); responsive frontend UI."]
+        ["PES1UG24CS152", "Dheepak Seetharam", "A — Relational Schema & Security Core", "PostgreSQL DDL schema (10 tables); trigger trg_new_user_subscription; stored procedure sp_upgrade_user_subscription; view service_overview; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend main.py; advanced SQL suite (correlated, nested, recursive queries)."],
+        ["PES1UG24CS154", "Dhruv", "B — Telemetry, NoSQL & Vector Layer", "MongoDB 7 setup; 12,000 synthetic log generator (generate_logs.py); compound indexing; $percentile p95 aggregation pipeline (analytics.py); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (semantic_search.py); cross-database alert engine (alerts.py); responsive frontend UI."]
     ]
 )
 p_div = doc.add_paragraph()
@@ -825,8 +825,8 @@ story.append(Paragraph("API Pulse: A Centralized Hybrid Database Platform for Mu
 # Students Table
 st_data = [
     ["SRN", "Name"],
-    ["PES1UG24CS... (Replace with SRN 1)", "Dheepak Seetharam"],
-    ["PES1UG24CS... (Replace with SRN 2)", "Team Partner"]
+    ["PES1UG24CS152", "Dheepak Seetharam"],
+    ["PES1UG24CS154", "Dhruv"]
 ]
 story.append(make_pdf_table(st_data, [250, 254], hdr_color="#334155"))
 story.append(Spacer(1, 4))
@@ -844,8 +844,8 @@ story.append(Paragraph("<b>Why it is not a CRUD application:</b> API Pulse is an
 story.append(Paragraph("2. Students — SRN and Name", style_h1))
 work_data = [
     ["SRN", "Name", "Work package", "Responsibilities (database and application)"],
-    ["PES1UG24CS... (SRN 1)", "Dheepak Seetharam", "A — Relational Schema & Security Core", "PostgreSQL DDL schema (10 tables); trigger trg_new_user_subscription; stored procedure sp_upgrade_user_subscription; view service_overview; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend main.py; advanced SQL suite (correlated, nested, recursive queries)."],
-    ["PES1UG24CS... (SRN 2)", "Team Partner", "B — Telemetry, NoSQL & Vector Layer", "MongoDB 7 setup; 12,000 synthetic log generator (generate_logs.py); compound indexing; $percentile p95 aggregation pipeline (analytics.py); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (semantic_search.py); cross-database alert engine (alerts.py); responsive frontend UI."]
+    ["PES1UG24CS152", "Dheepak Seetharam", "A — Relational Schema & Security Core", "PostgreSQL DDL schema (10 tables); trigger trg_new_user_subscription; stored procedure sp_upgrade_user_subscription; view service_overview; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend main.py; advanced SQL suite (correlated, nested, recursive queries)."],
+    ["PES1UG24CS154", "Dhruv", "B — Telemetry, NoSQL & Vector Layer", "MongoDB 7 setup; 12,000 synthetic log generator (generate_logs.py); compound indexing; $percentile p95 aggregation pipeline (analytics.py); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (semantic_search.py); cross-database alert engine (alerts.py); responsive frontend UI."]
 ]
 story.append(make_pdf_table(work_data, [100, 100, 95, 209]))
 story.append(Paragraph("Table 1. Team members and division of work", style_caption))

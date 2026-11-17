@@ -7,8 +7,8 @@ DBMS Experiential Learning — Level 3 Project Report
 
 | SRN | Name |
 | :--- | :--- |
-| **PES1UG24CS...** *(Replace with SRN 1)* | **Dheepak Seetharam** |
-| **PES1UG24CS...** *(Replace with SRN 2)* | **Team Partner** |
+| **PES1UG24CS152** | **Dheepak Seetharam** |
+| **PES1UG24CS154** | **Dhruv** |
 
 Faculty: **Dr. Nagasundari S**  
 B.Tech CSE · Semester V · Section C · August–December 2026  
@@ -30,8 +30,8 @@ Repository: [github.com/ds610/api-pulse-DBMS-mini-project](https://github.com/ds
 
 | SRN | Name | Work package | Responsibilities (database and application) |
 | :--- | :--- | :--- | :--- |
-| **PES1UG24CS...** *(SRN 1)* | **Dheepak Seetharam** | A — Relational Schema & Security Core | PostgreSQL DDL schema (10 tables); trigger `trg_new_user_subscription`; stored procedure `sp_upgrade_user_subscription`; view `service_overview`; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend `main.py`; advanced SQL suite (correlated, nested, recursive queries). |
-| **PES1UG24CS...** *(SRN 2)* | **Team Partner** | B — Telemetry, NoSQL & Vector Layer | MongoDB 7 setup; 12,000 synthetic log generator (`generate_logs.py`); compound indexing; `$percentile` p95 aggregation pipeline (`analytics.py`); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (`semantic_search.py`); cross-database alert engine (`alerts.py`); responsive frontend UI. |
+| **PES1UG24CS152** | **Dheepak Seetharam** | A — Relational Schema & Security Core | PostgreSQL DDL schema (10 tables); trigger `trg_new_user_subscription`; stored procedure `sp_upgrade_user_subscription`; view `service_overview`; AES-128 Fernet key encryption pipeline; SHA-256 password hashing; RBAC (admin vs consumer); FastAPI backend `main.py`; advanced SQL suite (correlated, nested, recursive queries). |
+| **PES1UG24CS154** | **Dhruv** | B — Telemetry, NoSQL & Vector Layer | MongoDB 7 setup; 12,000 synthetic log generator (`generate_logs.py`); compound indexing; `$percentile` p95 aggregation pipeline (`analytics.py`); pgvector schema (HNSW cosine index); sentence-transformer embedding pipeline (`semantic_search.py`); cross-database alert engine (`alerts.py`); responsive frontend UI. |
 
 *Table 1. Team members and division of work*
 
