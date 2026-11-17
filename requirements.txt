@@ -8,4 +8,4 @@ cryptography
 python-dotenv
 apscheduler
 sentence-transformers
-
+argon2-cffi
